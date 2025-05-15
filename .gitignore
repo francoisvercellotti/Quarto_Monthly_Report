@@ -1,0 +1,28 @@
+# Ne pas versionner les datasets
+data/
+
+# Ignorer les fichiers Quarto générés (au cas où tu génères du HTML ou PDF)
+*.html
+*.pdf
+
+# Fichiers système courants
+.DS_Store
+Thumbs.db
+
+# Éviter de versionner les binaires et paquets
+*.deb
+*.exe
+*.zip
+*.tar.gz
+
+# Cache Python ou autres
+__pycache__/
+*.pyc
+*.pyo
+
+# Config éditeurs
+.vscode/
+.idea/
+
+# Logs
+*.log

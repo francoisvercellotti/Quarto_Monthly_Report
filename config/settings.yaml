@@ -1,0 +1,22 @@
+extract:
+  delay_between_downloads: 1
+  fields:
+  - name: pickup_datetime
+  - name: dropoff_datetime
+  - name: trip_distance
+  - name: passenger_count
+  file_extension: .parquet
+  file_prefix: yellow_tripdata
+  start_year: 2020
+  url_pattern: https://d37ci6vzurychx.cloudfront.net/trip-data/{file_name}
+extract_weather:
+  delay_between_downloads: 1
+  fields:
+  - name: date
+  - name: temp
+  - name: precipitation
+  file_extension: .csv
+  file_prefix: weather_nyc
+  start_year: 2020
+  url_pattern: https://example.com/weather/{file_name}
+report_month: 2025-02

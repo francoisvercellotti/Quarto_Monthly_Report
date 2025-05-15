@@ -1,0 +1,588 @@
+---
+title: "🚖 Rapport Mensuel Courses de Taxi — New York"
+author: "François Vercellotti"
+date: today
+format:
+  html:
+    toc: true
+    toc-title: "Sommaire"
+    number-sections: true
+    code-fold: true
+    code-summary: "Afficher le code"
+    self-contained: true
+    theme: cosmo
+    html-math-method: mathjax
+    include-in-header:
+      text: |
+        <style>
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        </style>
+jupyter: python3
+params:
+  month_code: "2023-07"
+---
+
+# 📌 Contexte et Objectifs
+
+Ce rapport présente l'analyse de l'activité des taxis à New York pour le mois sélectionné.
+
+Les objectifs sont les suivants :
+
+* Suivre les indicateurs clés de performance (KPI) des courses : nombre de trajets, distances parcourues et durées.
+* Identifier les périodes de forte activité.
+* Analyser les tendances et variations dans l'activité des taxis.
+* Fournir des visualisations claires pour faciliter la compréhension des données.
+
+---
+
+# 📊 Données utilisées
+
+Les analyses reposent sur les données suivantes :
+
+* **Données Taxi** : informations sur les trajets (prise en charge, dépose, distance, durée) pour le mois analysé.
+
+---
+
+# 📥 Préparation et Traitement des Données
+
+Les données taxi sont chargées pour analyse.
+
+```{python}
+import pandas as pd
+from datetime import datetime
+import plotly.express as px
+import plotly.graph_objects as go
+import plotly.figure_factory as ff
+import os
+import re
+import yaml
+from scipy import stats
+import numpy as np
+
+# Lecture du fichier settings.yaml pour obtenir le mois du rapport
+# Si le fichier n'est pas trouvé, utilisez une valeur par défaut
+try:
+    with open("config/settings.yaml", 'r') as file:
+        settings = yaml.safe_load(file)
+        month_code = settings.get('report_month', '2023-07')
+except Exception as e:
+    print(f"⚠️ Erreur lors de la lecture du fichier settings.yaml: {e}")
+    month_code = '2023-07'  # Valeur par défaut
+
+print(f"📅 Analyse pour le mois de: {month_code}")
+
+# Conversion en format lisible
+try:
+    date_obj = datetime.strptime(month_code, "%Y-%m")
+    month_name = date_obj.strftime("%B %Y")
+except:
+    month_name = "Inconnu"
+
+print(f"📅 Période: {month_name}")
+
+# Chargement des données taxi uniquement
+try:
+    df_taxi = pd.read_csv(f"data/{month_code}-taxi.csv", parse_dates=["pickup_datetime", "dropoff_datetime"])
+    print(f"✅ Données taxi chargées: {len(df_taxi)} enregistrements")
+
+    # Préparation des données
+    df_taxi["hour"] = df_taxi["pickup_datetime"].dt.hour
+    df_taxi["weekday"] = df_taxi["pickup_datetime"].dt.day_name()
+    df_taxi["date"] = df_taxi["pickup_datetime"].dt.date
+    df_taxi["duration"] = (df_taxi["dropoff_datetime"] - df_taxi["pickup_datetime"]).dt.total_seconds() / 60
+
+    # Filtrer les durées négatives ou aberrantes (>180 min)
+    df_taxi = df_taxi[(df_taxi["duration"] > 0) & (df_taxi["duration"] < 180)]
+
+    # Filtrer les distances aberrantes (>50 miles)
+    df_taxi = df_taxi[df_taxi["trip_distance"] < 50]
+
+    # Utilisation directe des données taxi pour l'analyse
+    df = df_taxi.copy()
+except Exception as e:
+    print(f"❌ Erreur lors du chargement des données taxi: {e}")
+    # Création d'un DataFrame vide pour éviter les erreurs
+    df = pd.DataFrame(columns=["pickup_datetime", "dropoff_datetime", "trip_distance", "hour", "weekday", "date"])
+    print("⚠️ Aucune donnée taxi disponible, rapport limité")
+```
+
+# 📈 Indicateurs Clés de Performance (KPIs)
+
+```{python}
+#| echo: false
+
+# Calcul des KPIs avec gestion des erreurs
+if not df.empty:
+    total_trips = len(df)
+    avg_distance = df["trip_distance"].mean() if "trip_distance" in df.columns else 0
+    avg_distance_rounded = round(avg_distance, 2)
+
+    if "duration" in df.columns:
+        avg_duration = df["duration"].mean()
+        # Identification des heures de pointe basée sur les données réelles
+        hourly_trips = df.groupby("hour").size()
+        peak_hours = hourly_trips.sort_values(ascending=False).head(3).index.tolist()
+        peak_hours.sort()  # Trier les heures par ordre croissant
+        peak_hours_str = ", ".join([f"{h}h" for h in peak_hours])
+    else:
+        avg_duration = 0
+        peak_hours_str = "Non déterminé"
+
+    # Jour de la semaine le plus chargé
+    if "weekday" in df.columns:
+        busiest_day = df.groupby("weekday").size().idxmax()
+    else:
+        busiest_day = "Non déterminé"
+else:
+    total_trips = 0
+    avg_distance = 0
+    avg_distance_rounded = 0
+    avg_duration = 0
+    peak_hours_str = "Non déterminé"
+    busiest_day = "Non déterminé"
+```
+
+```{python}
+#| output: asis
+# Génération "à la volée" du bloc KPI en Markdown
+print(f"## Rapport de trafic du mois de **{month_name}**")
+print()
+print(f"- 📊 Nombre total de trajets : **{total_trips:,}**")
+print(f"- 🛣️ Distance moyenne parcourue : **{avg_distance_rounded:.1f}** miles")
+print(f"- ⏱️ Durée moyenne d’un trajet : **{avg_duration:.1f}** minutes")
+print(f"- 🕘 Heures de pointe : **{peak_hours_str}**")
+print(f"- 📅 Jour le plus chargé : **{busiest_day}**")
+```
+
+# 📊 Analyse de l'Activité par Heure de la Journée
+
+## Volume de trajets par heure
+
+Ce graphique présente la répartition du nombre de trajets en fonction de l'heure de la journée.
+
+```{python}
+#| fig-cap: "Distribution horaire des courses de taxi"
+
+if not df.empty and "hour" in df.columns:
+    # Préparation des données
+    hourly_counts = df["hour"].value_counts().sort_index().reset_index()
+    hourly_counts.columns = ["hour", "count"]
+
+    # Heure avec le plus de trajets
+    max_hour = hourly_counts.loc[hourly_counts["count"].idxmax()]
+
+    # Création du graphique avec Plotly
+    fig = px.bar(hourly_counts, x="hour", y="count",
+                 labels={"hour": "Heure", "count": "Nombre de trajets"},
+                 title="Nombre de trajets par heure de la journée")
+
+    # Mise en forme du graphique
+    fig.update_layout(
+        xaxis=dict(
+            tickmode='linear',
+            tick0=0,
+            dtick=1,
+            title="Heure"
+        ),
+        yaxis=dict(
+            title="Nombre de trajets"
+        ),
+        plot_bgcolor='rgba(240, 240, 240, 0.5)',
+        height=500,
+        width=900
+    )
+
+    # Ajout d'annotation pour le pic
+    fig.add_annotation(
+        x=max_hour["hour"],
+        y=max_hour["count"],
+        text=f"Pic: {max_hour['count']:,} trajets",
+        showarrow=True,
+        arrowhead=1,
+        ax=0,
+        ay=-40
+    )
+
+    fig.show()
+
+    # Description de l'observation basée sur les données réelles
+    peak_hour = int(max_hour["hour"])
+    if peak_hour < 6:
+        print(f"**Observation** : Le pic d'activité est observé très tôt, à {peak_hour}h, "
+              f"suggérant une forte demande matinale.")
+    elif 6 <= peak_hour < 10:
+        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
+              f"correspondant à l'heure de pointe matinale.")
+    elif 10 <= peak_hour < 16:
+        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
+              f"durant la période de mi-journée.")
+    elif 16 <= peak_hour < 20:
+        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
+              f"correspondant à l'heure de pointe en fin de journée.")
+    else:
+        print(f"**Observation** : Le pic d'activité est observé en soirée, à {peak_hour}h, "
+              f"suggérant une forte demande nocturne.")
+else:
+    print("⚠️ Données insuffisantes pour générer le graphique des trajets par heure")
+```
+
+## Distance moyenne parcourue par heure
+
+```{python}
+#| fig-cap: "Évolution de la distance moyenne par heure"
+
+if not df.empty and "hour" in df.columns and "trip_distance" in df.columns:
+    # Calcul des distances moyennes par heure
+    dist_hour = df.groupby("hour")["trip_distance"].mean().reset_index()
+
+    # Identification de l'heure avec la distance moyenne maximale et minimale
+    max_dist_hour = dist_hour.loc[dist_hour["trip_distance"].idxmax()]
+    min_dist_hour = dist_hour.loc[dist_hour["trip_distance"].idxmin()]
+
+    # Création du graphique avec Plotly
+    fig = go.Figure()
+
+    # Ajout de la ligne principale
+    fig.add_trace(go.Scatter(
+        x=dist_hour["hour"],
+        y=dist_hour["trip_distance"],
+        mode='lines+markers',
+        name='Distance moyenne',
+        line=dict(color='royalblue', width=3),
+        marker=dict(size=8)
+    ))
+
+    # Mise en forme du graphique
+    fig.update_layout(
+        title="Distance moyenne par heure",
+        xaxis=dict(
+            title="Heure",
+            tickmode='linear',
+            tick0=0,
+            dtick=1
+        ),
+        yaxis=dict(
+            title="Distance moyenne (miles)"
+        ),
+        plot_bgcolor='rgba(240, 240, 240, 0.5)',
+        height=500,
+        width=900
+    )
+
+    # Ajout d'annotations pour les points maximum et minimum
+    fig.add_annotation(
+        x=max_dist_hour["hour"],
+        y=max_dist_hour["trip_distance"],
+        text=f'Max: {max_dist_hour["trip_distance"]:.2f} miles',
+        showarrow=True,
+        arrowhead=1,
+        ax=0,
+        ay=-40
+    )
+
+    fig.add_annotation(
+        x=min_dist_hour["hour"],
+        y=min_dist_hour["trip_distance"],
+        text=f'Min: {min_dist_hour["trip_distance"]:.2f} miles',
+        showarrow=True,
+        arrowhead=1,
+        ax=0,
+        ay=40
+    )
+
+    fig.show()
+
+    # Observation basée sur les données réelles
+    print(f"**Observation** : Les trajets les plus longs ({max_dist_hour['trip_distance']:.2f} miles) sont observés à {int(max_dist_hour['hour'])}h, "
+          f"tandis que les plus courts ({min_dist_hour['trip_distance']:.2f} miles) sont à {int(min_dist_hour['hour'])}h.")
+
+    if max_dist_hour["hour"] >= 22 or max_dist_hour["hour"] <= 5:
+        print("Les distances plus longues en période nocturne pourraient s'expliquer par des trajets vers/depuis les aéroports ou la périphérie.")
+    elif 16 <= max_dist_hour["hour"] < 20:
+        print("Les distances plus longues en fin de journée pourraient correspondre à des retours en banlieue après le travail.")
+else:
+    print("⚠️ Données insuffisantes pour générer le graphique des distances moyennes par heure")
+```
+
+# 📊 Analyse de la Durée des Trajets
+
+```{python}
+#| fig-cap: "Distribution des durées de trajet"
+
+if not df.empty and "duration" in df.columns:
+    # Filtrage des durées aberrantes (> 2h ou < 0)
+    valid_durations = df[(df["duration"] > 0) & (df["duration"] < 120)]
+
+    # Calcul des statistiques
+    mean_duration = valid_durations["duration"].mean()
+    median_duration = valid_durations["duration"].median()
+    percentile_90 = valid_durations["duration"].quantile(0.9)
+
+    # Création de l'histogramme avec Plotly
+    fig = ff.create_distplot(
+        [valid_durations["duration"]],
+        group_labels=["Durée des trajets"],
+        bin_size=1,
+        show_rug=False,
+        curve_type='normal'
+    )
+
+    y_vals = []
+    for trace in fig.data:
+        if hasattr(trace, 'y') and trace.y is not None:
+            y_vals.extend(trace.y)
+    y_max = max(y_vals) if y_vals else 0
+
+    # Lignes verticales moyenne et médiane
+    fig.add_shape(type="line",
+                  x0=mean_duration, y0=0,
+                  x1=mean_duration, y1=y_max,
+                  line=dict(color="red", width=2, dash="dash"))
+    fig.add_shape(type="line",
+                  x0=median_duration, y0=0,
+                  x1=median_duration, y1=y_max,
+                  line=dict(color="green", width=2, dash="dash"))
+
+    # Mise en page et annotations
+    fig.update_layout(
+        title="Distribution des Durées de Trajet",
+        xaxis_title="Durée (minutes)",
+        yaxis_title="Densité",
+        width=900, height=500,
+        plot_bgcolor='rgba(240,240,240,0.5)',
+        annotations=[
+            dict(x=mean_duration, y=y_max*0.95,
+                 text=f"Moyenne: {mean_duration:.1f} min",
+                 showarrow=False, font=dict(color="red")),
+            dict(x=median_duration, y=y_max*0.85,
+                 text=f"Médiane: {median_duration:.1f} min",
+                 showarrow=False, font=dict(color="green"))
+        ]
+    )
+    fig.show()
+
+    # Observations
+    skew = valid_durations["duration"].skew()
+    print(f"**Observation** : 90% des trajets durent moins de {percentile_90:.1f} minutes.")
+    if skew > 1:
+        print("Distribution fortement asymétrique à droite.")
+    elif skew > 0.5:
+        print("Distribution asymétrique modérée vers la droite.")
+    else:
+        print("Distribution relativement symétrique.")
+else:
+    print("⚠️ Pas assez de données pour analyser les durées")
+```
+
+# 📊 Analyse par Jour de la Semaine
+
+```{python}
+#| fig-cap: "Distribution des courses par jour de la semaine"
+
+if not df.empty and "weekday" in df.columns:
+    # Ordre des jours de la semaine
+    days_order = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
+    fr_days = {"Monday": "Lundi", "Tuesday": "Mardi", "Wednesday": "Mercredi",
+               "Thursday": "Jeudi", "Friday": "Vendredi", "Saturday": "Samedi", "Sunday": "Dimanche"}
+
+    # Conversion en jours français si nécessaire
+    if str(df["weekday"].iloc[0]) in fr_days.values():
+        days_order = [fr_days[day] for day in days_order]
+
+    # Préparation des données
+    weekday_counts = df["weekday"].value_counts().reindex(days_order).reset_index()
+    weekday_counts.columns = ["weekday", "count"]
+
+    # Ajout d'une colonne pour identifier les weekends
+    weekday_counts["is_weekend"] = weekday_counts["weekday"].isin([days_order[-1], days_order[-2]])
+
+    # Création du graphique avec Plotly
+    fig = px.bar(
+        weekday_counts,
+        x="weekday",
+        y="count",
+        color="is_weekend",
+        color_discrete_map={True: "orange", False: "royalblue"},
+        labels={"weekday": "Jour de la semaine", "count": "Nombre de trajets", "is_weekend": "Weekend"},
+        title="Nombre de trajets par jour de la semaine"
+    )
+
+    # Mise en forme du graphique
+    fig.update_layout(
+        xaxis=dict(
+            categoryorder='array',
+            categoryarray=days_order,
+            title="Jour de la semaine"
+        ),
+        yaxis=dict(
+            title="Nombre de trajets"
+        ),
+        plot_bgcolor='rgba(240, 240, 240, 0.5)',
+        height=500,
+        width=900,
+        showlegend=False
+    )
+
+    fig.show()
+
+    # Identification du jour le plus et moins chargé
+    max_day_row = weekday_counts.loc[weekday_counts["count"].idxmax()]
+    min_day_row = weekday_counts.loc[weekday_counts["count"].idxmin()]
+    max_day = max_day_row["weekday"]
+    min_day = min_day_row["weekday"]
+    max_count = max_day_row["count"]
+    min_count = min_day_row["count"]
+
+    diff_pct = ((max_count - min_count) / min_count) * 100
+
+    print(f"**Observation** : {max_day} est le jour le plus chargé avec {int(max_count):,} trajets, "
+          f"tandis que {min_day} est le moins actif avec {int(min_count):,} trajets, "
+          f"soit une différence de {diff_pct:.1f}%.")
+
+    # Analyse weekend vs semaine
+    weekend_rows = weekday_counts[weekday_counts["is_weekend"]]
+    weekday_rows = weekday_counts[~weekday_counts["is_weekend"]]
+
+    weekend_avg = weekend_rows["count"].mean() if not weekend_rows.empty else 0
+    weekday_avg = weekday_rows["count"].mean() if not weekday_rows.empty else 0
+
+    if weekday_avg > 0:
+        diff_we_pct = ((weekend_avg - weekday_avg) / weekday_avg) * 100
+
+        if diff_we_pct > 10:
+            print(f"Le weekend connaît une hausse significative d'activité (+{diff_we_pct:.1f}%) par rapport à la semaine.")
+        elif diff_we_pct < -10:
+            print(f"Le weekend connaît une baisse significative d'activité ({diff_we_pct:.1f}%) par rapport à la semaine.")
+        else:
+            print("L'activité reste relativement stable entre les jours de semaine et le weekend.")
+else:
+    print("⚠️ Données insuffisantes pour générer le graphique par jour de la semaine")
+```
+
+# 📅 Répartition des Trajets par Jour
+
+```{python}
+#| fig-cap: "Nombre de courses par jour du mois"
+
+if not df.empty and "date" in df.columns:
+    # Vérification de la présence de valeurs pour chaque jour du mois
+    date_range = pd.date_range(df["date"].min(), df["date"].max())
+    daily_counts = df.groupby("date").size().reset_index(name="trips")
+
+    # Conversion au format datetime pour manipulation
+    daily_counts["date"] = pd.to_datetime(daily_counts["date"])
+
+    # S'assurer que tous les jours sont présents
+    all_dates = pd.DataFrame({'date': date_range})
+    daily_counts = pd.merge(all_dates, daily_counts, on='date', how='left').fillna(0)
+
+    # Ajout du jour de la semaine
+    daily_counts["weekday"] = daily_counts["date"].dt.day_name()
+    daily_counts["is_weekend"] = daily_counts["date"].dt.dayofweek >= 5
+    daily_counts["date_str"] = daily_counts["date"].dt.strftime('%d-%m (%a)')
+
+    # Création du graphique avec Plotly
+    fig = px.bar(
+        daily_counts,
+        x="date",
+        y="trips",
+        color="is_weekend",
+        color_discrete_map={True: "orange", False: "royalblue"},
+        labels={"date": "Date", "trips": "Nombre de trajets", "is_weekend": "Weekend"},
+        title="Nombre de trajets par jour du mois"
+    )
+
+    # Mise en forme du graphique
+    fig.update_layout(
+        xaxis=dict(
+            title="Date",
+            tickmode='array',
+            tickvals=daily_counts["date"],
+            ticktext=daily_counts["date_str"],
+            tickangle=45
+        ),
+        yaxis=dict(
+            title="Nombre de trajets"
+        ),
+        plot_bgcolor='rgba(240, 240, 240, 0.5)',
+        height=500,
+        width=1000,
+        showlegend=False
+    )
+
+    fig.show()
+
+    # Identification des jours significatifs
+    # Filtrer pour éliminer les valeurs aberrantes (jours avec très peu de trajets)
+    valid_days = daily_counts[daily_counts["trips"] > daily_counts["trips"].max() * 0.1]
+
+    if not valid_days.empty:
+        max_day = valid_days.loc[valid_days["trips"].idxmax()]
+        min_day = valid_days.loc[valid_days["trips"].idxmin()]
+        max_date = max_day["date"].strftime('%d/%m/%Y (%A)')
+        min_date = min_day["date"].strftime('%d/%m/%Y (%A)')
+
+        print(f"**Observation** : Le jour avec le plus grand nombre de courses est le {max_date} "
+              f"avec {int(max_day['trips']):,} trajets.")
+        print(f"Le jour avec le moins de courses est le {min_date} "
+              f"avec {int(min_day['trips']):,} trajets.")
+
+        # Analyse de la tendance
+        valid_days = valid_days.reset_index(drop=True)
+        x = np.arange(len(valid_days))
+        y = valid_days["trips"].values
+        slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+
+        if abs(r_value) > 0.5:
+            trend = "forte"
+        elif abs(r_value) > 0.3:
+            trend = "modérée"
+        else:
+            trend = "faible"
+
+        if slope > 0:
+            direction = "hausse"
+        else:
+            direction = "baisse"
+
+        print(f"Sur l'ensemble du mois, on observe une {trend} tendance à la {direction} "
+              f"de l'activité (r²={r_value**2:.2f}).")
+    else:
+        print("⚠️ Données insuffisantes pour analyser les tendances journalières")
+else:
+    print("⚠️ Données insuffisantes pour générer le graphique des trajets par jour")
+```
+
+# 📌 Synthèse du Mois
+
+```{python}
+#| echo: false
+# Variables pour la synthèse
+if not df.empty and "trip_distance" in df.columns and "hour" in df.columns:
+    # Top 3 des heures les plus actives
+    hourly_trips = df.groupby("hour").size()
+    peak_hours = hourly_trips.sort_values(ascending=False).head(3).index.tolist()
+    peak_hours_range = f"{min(peak_hours)}h et {max(peak_hours)}h"
+
+    avg_distance_rounded = round(avg_distance, 2)
+else:
+    peak_hours_range = "17h et 20h"
+    avg_distance_rounded = 0
+```
+
+```{python}
+#| output: asis
+# Synthèse "à la volée" en Markdown
+print(f"- 📈 L'activité maximale se concentre généralement entre **{peak_hours_range}** selon les données disponibles.")
+print(f"- 🛣️ Distance moyenne des trajets : **{avg_distance_rounded:.2f} Miles**")
+print(f"- 📆 Une analyse plus détaillée de la répartition journalière est disponible dans les graphiques ci-dessus.")
+```
+
+# 🚀 Recommandations pour les Prochains Mois
+
+* Intégrer le montant des courses et des pourboires pour enrichir les analyses économiques.
+* Identifier les zones géographiques les plus actives via des cartes interactives.
+* Étudier plus en détail l'impact des facteurs externes comme les événements ou la saisonnalité sur le nombre de courses.
+* Croiser les données avec des événements locaux (concerts, matchs, conventions) pour expliquer certains pics.
