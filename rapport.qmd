@@ -71,7 +71,6 @@ except Exception as e:
     print(f"⚠️ Erreur lors de la lecture du fichier settings.yaml: {e}")
     month_code = '2023-07'  # Valeur par défaut
 
-print(f"📅 Analyse pour le mois de: {month_code}")
 
 # Conversion en format lisible
 try:
@@ -80,12 +79,10 @@ try:
 except:
     month_name = "Inconnu"
 
-print(f"📅 Période: {month_name}")
 
 # Chargement des données taxi uniquement
 try:
     df_taxi = pd.read_csv(f"data/{month_code}-taxi.csv", parse_dates=["pickup_datetime", "dropoff_datetime"])
-    print(f"✅ Données taxi chargées: {len(df_taxi)} enregistrements")
 
     # Préparation des données
     df_taxi["hour"] = df_taxi["pickup_datetime"].dt.hour
@@ -108,7 +105,17 @@ except Exception as e:
     print("⚠️ Aucune donnée taxi disponible, rapport limité")
 ```
 
+```{python}
+#| output: asis
+# Génération "à la volée" du bloc d'information sur la période en Markdown
+print(f"## Configuration pour le rapport du mois de **{month_name}**")
+print()
+print(f"- 📅 Période d'analyse : **{month_name}**")
+print(f"- 🗓️ Code période : **{month_code}**")
+print(f"- 📊 Fichier de données : **data/{month_code}-taxi.csv**")
+print(f"- 🔢 Nombre d'enregistrements : **{len(df_taxi):,}**")
 # 📈 Indicateurs Clés de Performance (KPIs)
+```
 
 ```{python}
 #| echo: false
@@ -165,7 +172,8 @@ Ce graphique présente la répartition du nombre de trajets en fonction de l'heu
 ```{python}
 #| fig-cap: "Distribution horaire des courses de taxi"
 
-if not df.empty and "hour" in df.columns:
+# Vérification que df existe et contient la colonne "hour"
+if 'df' in globals() and not df.empty and "hour" in df.columns:
     # Préparation des données
     hourly_counts = df["hour"].value_counts().sort_index().reset_index()
     hourly_counts.columns = ["hour", "count"]
@@ -207,25 +215,34 @@ if not df.empty and "hour" in df.columns:
 
     fig.show()
 
-    # Description de l'observation basée sur les données réelles
+    # Stockage de l'information pour l'affichage
     peak_hour = int(max_hour["hour"])
+
+    # Détermination du message approprié
     if peak_hour < 6:
-        print(f"**Observation** : Le pic d'activité est observé très tôt, à {peak_hour}h, "
-              f"suggérant une forte demande matinale.")
+        observation_msg = f"Le pic d'activité est observé très tôt, à **{peak_hour}h**, suggérant une forte demande matinale."
     elif 6 <= peak_hour < 10:
-        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
-              f"correspondant à l'heure de pointe matinale.")
+        observation_msg = f"Le pic d'activité est observé à **{peak_hour}h**, correspondant à l'heure de pointe matinale."
     elif 10 <= peak_hour < 16:
-        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
-              f"durant la période de mi-journée.")
+        observation_msg = f"Le pic d'activité est observé à **{peak_hour}h**, durant la période de mi-journée."
     elif 16 <= peak_hour < 20:
-        print(f"**Observation** : Le pic d'activité est observé à {peak_hour}h, "
-              f"correspondant à l'heure de pointe en fin de journée.")
+        observation_msg = f"Le pic d'activité est observé à **{peak_hour}h**, correspondant à l'heure de pointe en fin de journée."
     else:
-        print(f"**Observation** : Le pic d'activité est observé en soirée, à {peak_hour}h, "
-              f"suggérant une forte demande nocturne.")
+        observation_msg = f"Le pic d'activité est observé en soirée, à **{peak_hour}h**, suggérant une forte demande nocturne."
 else:
     print("⚠️ Données insuffisantes pour générer le graphique des trajets par heure")
+    observation_msg = "Données insuffisantes pour générer l'observation."
+```
+
+```{python}
+#| output: asis
+
+# Utilisation de la même technique avec output: asis pour générer le bloc d'observation
+if 'observation_msg' in globals():
+    print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+    print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+    print(f'  <p>{observation_msg}</p>')
+    print('</div>')
 ```
 
 ## Distance moyenne parcourue par heure
@@ -294,16 +311,35 @@ if not df.empty and "hour" in df.columns and "trip_distance" in df.columns:
 
     fig.show()
 
-    # Observation basée sur les données réelles
-    print(f"**Observation** : Les trajets les plus longs ({max_dist_hour['trip_distance']:.2f} miles) sont observés à {int(max_dist_hour['hour'])}h, "
-          f"tandis que les plus courts ({min_dist_hour['trip_distance']:.2f} miles) sont à {int(min_dist_hour['hour'])}h.")
+    # Stockage de l'information pour l'affichage
+    max_hour_dist = int(max_dist_hour["hour"])
+    min_hour_dist = int(min_dist_hour["hour"])
 
-    if max_dist_hour["hour"] >= 22 or max_dist_hour["hour"] <= 5:
-        print("Les distances plus longues en période nocturne pourraient s'expliquer par des trajets vers/depuis les aéroports ou la périphérie.")
-    elif 16 <= max_dist_hour["hour"] < 20:
-        print("Les distances plus longues en fin de journée pourraient correspondre à des retours en banlieue après le travail.")
+    # Création du message d'observation
+    observation_msg = f"Les trajets les plus longs ({max_dist_hour['trip_distance']:.2f} miles) sont observés à {max_hour_dist}h, "
+    observation_msg += f"tandis que les plus courts ({min_dist_hour['trip_distance']:.2f} miles) sont à {min_hour_dist}h."
+
+    # Ajout d'un commentaire contextuel selon l'heure du maximum
+    if max_hour_dist >= 22 or max_hour_dist <= 5:
+        observation_msg += " Les distances plus longues en période nocturne pourraient s'expliquer par des trajets vers/depuis les aéroports ou la périphérie."
+    elif 16 <= max_hour_dist < 20:
+        observation_msg += " Les distances plus longues en fin de journée pourraient correspondre à des retours en banlieue après le travail."
+    elif 6 <= max_hour_dist < 10:
+        observation_msg += " Les distances plus longues tôt le matin pourraient correspondre à des trajets domicile-travail depuis la périphérie."
 else:
     print("⚠️ Données insuffisantes pour générer le graphique des distances moyennes par heure")
+    observation_msg = "Données insuffisantes pour analyser les distances par heure."
+```
+
+```{python}
+#| output: asis
+
+# Affichage du bloc d'observation formaté
+if 'observation_msg' in globals():
+    print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+    print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+    print(f'  <p>{observation_msg}</p>')
+    print('</div>')
 ```
 
 # 📊 Analyse de la Durée des Trajets
@@ -363,17 +399,37 @@ if not df.empty and "duration" in df.columns:
     )
     fig.show()
 
-    # Observations
+    # Calcul pour l'observation
     skew = valid_durations["duration"].skew()
-    print(f"**Observation** : 90% des trajets durent moins de {percentile_90:.1f} minutes.")
+
+    # Construction du message d'observation
+    observation_msg = f"90% des trajets durent moins de {percentile_90:.1f} minutes. "
+
+    # Ajout d'une explication sur la distribution
     if skew > 1:
-        print("Distribution fortement asymétrique à droite.")
+        observation_msg += "La distribution est fortement asymétrique vers la droite, montrant que la majorité des trajets sont courts, mais quelques trajets très longs influencent la moyenne."
     elif skew > 0.5:
-        print("Distribution asymétrique modérée vers la droite.")
+        observation_msg += "La distribution présente une asymétrie modérée vers la droite, suggérant que la plupart des trajets sont de courte durée."
     else:
-        print("Distribution relativement symétrique.")
+        observation_msg += "La distribution est relativement symétrique, indiquant une répartition équilibrée des durées de trajet."
+
+    # Ajout d'une observation sur l'écart moyenne/médiane si significatif
+    if mean_duration > median_duration * 1.2:
+        observation_msg += f" L'écart significatif entre moyenne et médiane ({(mean_duration/median_duration - 1)*100:.0f}% de différence) confirme l'influence des trajets longs sur la distribution."
 else:
     print("⚠️ Pas assez de données pour analyser les durées")
+    observation_msg = "Données insuffisantes pour analyser les durées de trajet."
+```
+
+```{python}
+#| output: asis
+
+# Affichage du bloc d'observation formaté
+if 'observation_msg' in globals():
+    print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+    print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+    print(f'  <p>{observation_msg}</p>')
+    print('</div>')
 ```
 
 # 📊 Analyse par Jour de la Semaine
@@ -437,9 +493,10 @@ if not df.empty and "weekday" in df.columns:
 
     diff_pct = ((max_count - min_count) / min_count) * 100
 
-    print(f"**Observation** : {max_day} est le jour le plus chargé avec {int(max_count):,} trajets, "
-          f"tandis que {min_day} est le moins actif avec {int(min_count):,} trajets, "
-          f"soit une différence de {diff_pct:.1f}%.")
+    # Construction du message d'observation
+    observation_msg = f"{max_day} est le jour le plus chargé avec {int(max_count):,} trajets, "
+    observation_msg += f"tandis que {min_day} est le moins actif avec {int(min_count):,} trajets, "
+    observation_msg += f"soit une différence de {diff_pct:.1f}%. "
 
     # Analyse weekend vs semaine
     weekend_rows = weekday_counts[weekday_counts["is_weekend"]]
@@ -452,13 +509,28 @@ if not df.empty and "weekday" in df.columns:
         diff_we_pct = ((weekend_avg - weekday_avg) / weekday_avg) * 100
 
         if diff_we_pct > 10:
-            print(f"Le weekend connaît une hausse significative d'activité (+{diff_we_pct:.1f}%) par rapport à la semaine.")
+            observation_msg += f"Le weekend connaît une hausse significative d'activité (+{diff_we_pct:.1f}%) par rapport à la semaine, "
+            observation_msg += "ce qui pourrait s'expliquer par les sorties nocturnes, événements culturels et touristiques."
         elif diff_we_pct < -10:
-            print(f"Le weekend connaît une baisse significative d'activité ({diff_we_pct:.1f}%) par rapport à la semaine.")
+            observation_msg += f"Le weekend connaît une baisse significative d'activité ({diff_we_pct:.1f}%) par rapport à la semaine, "
+            observation_msg += "suggérant que les déplacements professionnels constituent une part importante de l'activité des taxis."
         else:
-            print("L'activité reste relativement stable entre les jours de semaine et le weekend.")
+            observation_msg += "L'activité reste relativement stable entre les jours de semaine et le weekend, "
+            observation_msg += "indiquant un équilibre entre les usages professionnels et de loisirs."
 else:
     print("⚠️ Données insuffisantes pour générer le graphique par jour de la semaine")
+    observation_msg = "Données insuffisantes pour analyser l'activité par jour de la semaine."
+```
+
+```{python}
+#| output: asis
+
+# Affichage du bloc d'observation formaté
+if 'observation_msg' in globals():
+    print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+    print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+    print(f'  <p>{observation_msg}</p>')
+    print('</div>')
 ```
 
 # 📅 Répartition des Trajets par Jour
@@ -524,10 +596,11 @@ if not df.empty and "date" in df.columns:
         max_date = max_day["date"].strftime('%d/%m/%Y (%A)')
         min_date = min_day["date"].strftime('%d/%m/%Y (%A)')
 
-        print(f"**Observation** : Le jour avec le plus grand nombre de courses est le {max_date} "
-              f"avec {int(max_day['trips']):,} trajets.")
-        print(f"Le jour avec le moins de courses est le {min_date} "
-              f"avec {int(min_day['trips']):,} trajets.")
+        # Construction du message d'observation
+        observation_msg = f"Le jour avec le plus grand nombre de courses est le {max_date} "
+        observation_msg += f"avec {int(max_day['trips']):,} trajets. "
+        observation_msg += f"Le jour avec le moins de courses est le {min_date} "
+        observation_msg += f"avec {int(min_day['trips']):,} trajets. "
 
         # Analyse de la tendance
         valid_days = valid_days.reset_index(drop=True)
@@ -547,12 +620,32 @@ if not df.empty and "date" in df.columns:
         else:
             direction = "baisse"
 
-        print(f"Sur l'ensemble du mois, on observe une {trend} tendance à la {direction} "
-              f"de l'activité (r²={r_value**2:.2f}).")
+        # Ajout de l'analyse de tendance
+        observation_msg += f"Sur l'ensemble du mois, on observe une {trend} tendance à la {direction} "
+        observation_msg += f"de l'activité (r²={r_value**2:.2f})."
+
+        # Ajout d'une interprétation possible
+        if slope > 0 and r_value**2 > 0.3:
+            observation_msg += " Cette hausse progressive pourrait indiquer une augmentation de la demande liée à des facteurs saisonniers ou événementiels."
+        elif slope < 0 and r_value**2 > 0.3:
+            observation_msg += " Cette baisse pourrait être liée à des facteurs saisonniers, des conditions météorologiques, ou à une augmentation de l'utilisation d'autres modes de transport."
     else:
         print("⚠️ Données insuffisantes pour analyser les tendances journalières")
+        observation_msg = "Données insuffisantes pour analyser les tendances journalières."
 else:
     print("⚠️ Données insuffisantes pour générer le graphique des trajets par jour")
+    observation_msg = "Données insuffisantes pour analyser la répartition des trajets par jour."
+```
+
+```{python}
+#| output: asis
+
+# Affichage du bloc d'observation formaté
+if 'observation_msg' in globals():
+    print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+    print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+    print(f'  <p>{observation_msg}</p>')
+    print('</div>')
 ```
 
 # 📌 Synthèse du Mois
