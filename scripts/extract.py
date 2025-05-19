@@ -5,15 +5,33 @@ import requests
 import io
 import pandas as pd
 import pyarrow.parquet as pq
+import geopandas as gpd
 from pathlib import Path
 from requests.exceptions import HTTPError
 
 # Mapping logique → réel des colonnes
 COLUMN_MAP = {
-    "pickup_datetime": "tpep_pickup_datetime",
-    "dropoff_datetime": "tpep_dropoff_datetime",
+    "pickup_datetime": "pickup_datetime",
+    "dropoff_datetime": "dropoff_datetime",
     "trip_distance":      "trip_distance",
-    "passenger_count":    "passenger_count"
+    "passenger_count":    "passenger_count",
+    "payment_type":       "payment_type",
+    "total_amount":       "total_amount",
+    "PULocationID":       "PULocationID",
+    "DOLocationID":       "DOLocationID",
+    "tip_amount":        "tip_amount",
+    "payment_method":       "payment_method"
+}
+
+# Mapping payment_type → libellé
+PAYMENT_MAP = {
+    0: "Flex Fare",
+    1: "Credit card",
+    2: "Cash",
+    3: "No charge",
+    4: "Dispute",
+    5: "Unknown",
+    6: "Voided trip"
 }
 
 def load_config(path: str, section: str) -> dict:
@@ -32,7 +50,7 @@ def extract_section(section: str):
     month = cfg['report_month']
     file_name = f"{cfg['file_prefix']}_{month}{cfg['file_extension']}"
     url = cfg['url_pattern'].format(file_name=file_name)
-    print(f"⬇️  Downloading {url}")
+    print(f"⬇️ Downloading {url}")
 
     try:
         r = requests.get(url, timeout=30)
@@ -45,8 +63,8 @@ def extract_section(section: str):
         return
 
     data = r.content
-    logical_cols = [f['name'] for f in cfg.get('fields', [])]
-    real_cols = [COLUMN_MAP.get(c, c) for c in logical_cols]
+    # Colonnes à charger
+    real_cols = [COLUMN_MAP[c] for c in COLUMN_MAP]
 
     # Lecture des données
     if file_name.endswith('.parquet'):
@@ -59,8 +77,11 @@ def extract_section(section: str):
             df = pq.read_table(buf).to_pandas()
     else:
         df = pd.read_csv(io.BytesIO(data),
-                         usecols=real_cols if real_cols else None,
-                         parse_dates=[COLUMN_MAP.get("pickup_datetime"), COLUMN_MAP.get("dropoff_datetime")])
+                         usecols=real_cols,
+                         parse_dates=[
+                             COLUMN_MAP["pickup_datetime"],
+                             COLUMN_MAP["dropoff_datetime"]
+                         ])
 
     # Renommer colonnes réelles en logiques
     rename_map = {v: k for k, v in COLUMN_MAP.items() if v in df.columns}
@@ -70,14 +91,25 @@ def extract_section(section: str):
     if section == 'extract':
         df = df[(df['trip_distance'] > 0) & (df['passenger_count'] > 0)]
 
+    # → Charger et fusionner les zones géographiques
+    #    (on suppose taxi_zones.json dans le repo racine)
+    tz = gpd.read_file("data/taxi_zones.json")  # GeoDataFrame avec champ LocationID et zone
+    zones = tz[['LocationID','zone']].set_index('LocationID')
+
+    # Fusion pour PULocationID et DOLocationID
+    df = df.merge(zones.rename(columns={'zone':'PU_zone'}), left_on='PULocationID', right_index=True, how='left')
+    df = df.merge(zones.rename(columns={'zone':'DO_zone'}), left_on='DOLocationID', right_index=True, how='left')
+
+    # Cartes de paiement
+    df['payment_method'] = df['payment_type'].map(PAYMENT_MAP).fillna("Other")
+
     # Sauvegarde en CSV
     out_folder = Path('data')
     out_folder.mkdir(exist_ok=True)
-    suffix = 'taxi' if section == 'extract' else 'meteo'
-    out_file = out_folder / f"{month}-{suffix}.csv"
+    out_file = out_folder / f"{month}-taxi.csv"
     df.to_csv(out_file, index=False)
     print(f"✅ Saved cleaned data to {out_file}")
 
 if __name__ == '__main__':
     extract_section('extract')
-    # La partie qui charge les données météo a été supprimée
+    # Weather extraction supprimée

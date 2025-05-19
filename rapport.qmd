@@ -20,89 +20,111 @@ format:
     include-in-header:
       text: |
         <style>
-          /* Police et tailles générales */
-          body {
+            /* Police et tailles générales */
+            body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             font-size: 18px;  /* Augmentation de la taille de base */
             line-height: 1.6;
-          }
+            }
 
-          /* Titre principal */
-          h1.title {
+            /* Titre principal */
+            h1.title {
             font-size: 3em !important;  /* Titre principal plus grand */
             margin-bottom: 0.8em !important;
             font-weight: 600 !important;
-          }
+            }
 
-          /* Sous-titres - Respect de la hiérarchie */
-          h2 {
+            /* Sous-titres - Respect de la hiérarchie */
+            h2 {
             font-size: 2.2em !important;
             margin-top: 1.5em !important;
-          }
+            }
 
-          h3 {
+            h3 {
             font-size: 1.8em !important;
-          }
+            }
 
-          h4 {
-            font-size: 1.5em !important;
-          }
+            h4 {
+            font-size: 1.6em !important; /* Augmenté pour être plus visible */
+            }
 
-          h5 {
-            font-size: 1.3em !important;
-          }
+            h5 {
+            font-size: 1.4em !important; /* Augmenté proportionnellement */
+            }
 
-          /* Assure la hiérarchie des titres numérotés */
-          .header-section-number {
+            /* Assure la hiérarchie des titres numérotés */
+            .header-section-number {
             font-weight: 600;
-          }
+            }
 
-          /* Correction pour garantir que les sous-niveaux (4.2) ne sont jamais plus grands que les niveaux supérieurs (4) */
-          h1 .header-section-number + span,
-          h2 .header-section-number + span,
-          h3 .header-section-number + span,
-          h4 .header-section-number + span,
-          h5 .header-section-number + span {
+            /* CORRECTION: Forcer la taille pour chaque niveau de titre avec numéro de section */
+            h1 .header-section-number,
+            h1 .header-section-number ~ * {
+            font-size: 1em !important; /* Même taille que h1 */
+            }
+
+            h2 .header-section-number,
+            h2 .header-section-number ~ * {
+            font-size: 1em !important; /* Même taille que h2 */
+            }
+
+            h3 .header-section-number,
+            h3 .header-section-number ~ * {
+            font-size: 1em !important; /* Même taille que h3 */
+            }
+
+            h4 .header-section-number,
+            h4 .header-section-number ~ * {
+            font-size: 1em !important; /* Même taille que h4 */
+            }
+
+            h5 .header-section-number,
+            h5 .header-section-number ~ * {
+            font-size: 1em !important; /* Même taille que h5 */
+            }
+
+            /* CORRECTION SPÉCIFIQUE: Assurer que 4.2 n'est jamais plus grand que 4. */
+            .quarto-section-identifier {
             font-size: inherit !important;
-          }
+            }
 
-          /* Paragraphes */
-          p {
+            /* Paragraphes */
+            p {
             font-size: 1.1em;
             margin-bottom: 1.2em;
-          }
+            }
 
-          /* Conteneur principal */
-          #quarto-content {
+            /* Conteneur principal */
+            #quarto-content {
             max-width: 2000px;
             margin: 0 auto;
             padding: 0 2em;
-          }
+            }
 
-          /* Alignement des cellules de layout */
-          .cell.quarto-layout-cell {
+            /* Alignement des cellules de layout */
+            .cell.quarto-layout-cell {
             padding-left: 0 !important;
             padding-right: 0 !important;
             margin-left: 0 !important;
             margin-right: 0 !important;
-          }
+            }
 
-          /* Alignement général */
-          .quarto-title, .quarto-title-meta, .cell-output, .cell {
+            /* Alignement général */
+            .quarto-title, .quarto-title-meta, .cell-output, .cell {
             text-align: left !important;
             margin-left: 0 !important;
             padding-left: 0 !important;
-          }
+            }
 
-          /* Figures : suppression de tout décalage latéral */
-          .figure,
-          .figure-img,
-          .cell-output-display,
-          .plot-output,
-          .plotly-graph-div,
-          .bokeh,
-          .altair-render,
-          .ggplot {
+            /* Figures : suppression de tout décalage latéral */
+            .figure,
+            .figure-img,
+            .cell-output-display,
+            .plot-output,
+            .plotly-graph-div,
+            .bokeh,
+            .altair-render,
+            .ggplot {
             margin-left: 0 !important;
             margin-right: 0 !important;
             padding-left: 0 !important;
@@ -110,62 +132,62 @@ format:
             width: 100% !important;
             max-width: 100% !important;
             overflow: visible !important;
-          }
+            }
 
-          /* Supprime les styles inline de centering de Plotly */
-          .cell-output-display .plotly-graph-div[style*="margin"] {
+            /* Supprime les styles inline de centering de Plotly */
+            .cell-output-display .plotly-graph-div[style*="margin"] {
             margin: 0 !important;
-          }
+            }
 
-          /* Pour les images/SVG de Matplotlib et autres */
-          .cell-output-display img[width],
-          .cell-output-display svg[width] {
+            /* Pour les images/SVG de Matplotlib et autres */
+            .cell-output-display img[width],
+            .cell-output-display svg[width] {
             width: 100% !important;
             height: auto !important;
             margin: 0 !important;
-          }
+            }
 
-          /* Réduction de la taille de la barre d'outils Plotly */
-          .plotly .modebar {
+            /* Réduction de la taille de la barre d'outils Plotly */
+            .plotly .modebar {
             transform: scale(0.7) !important;
             transform-origin: top right !important;
-          }
+            }
 
-          .plotly .modebar-container {
+            .plotly .modebar-container {
             right: 5px !important;
             top: 5px !important;
-          }
+            }
 
-          .plotly .modebar-btn {
+            .plotly .modebar-btn {
             width: 1.6em !important;
             height: 1.6em !important;
             padding: 0.2em !important;
-          }
+            }
 
-          .plotly .modebar-btn svg {
+            .plotly .modebar-btn svg {
             transform: scale(0.7) !important;
-          }
+            }
 
-          /* Espacement et taille du code */
-          pre, code {
+            /* Espacement et taille du code */
+            pre, code {
             font-size: 0.95em;
-          }
+            }
 
-          .cell-output {
+            .cell-output {
             font-size: 1.15em;
             margin-top: 1em;
             margin-bottom: 2em;
-          }
+            }
 
-          /* Table des matières */
-          #toc-title {
+            /* Table des matières */
+            #toc-title {
             font-size: 1.4em !important;
             font-weight: 600 !important;
-          }
+            }
 
-          #TOC {
+            #TOC {
             font-size: 1.05em;
-          }
+            }
         </style>
 
 jupyter: python3
@@ -217,6 +239,7 @@ import re
 import yaml
 from scipy import stats
 import numpy as np
+import geopandas as gpd
 
 # Lecture du fichier settings.yaml pour obtenir le mois du rapport
 # Si le fichier n'est pas trouvé, utilisez une valeur par défaut
@@ -238,6 +261,8 @@ except:
 
 
 # Chargement des données taxi uniquement
+# 📦 Chargement et nettoyage des données taxi
+# Chargement des données taxi uniquement
 try:
     df_taxi = pd.read_csv(f"data/{month_code}-taxi.csv", parse_dates=["pickup_datetime", "dropoff_datetime"])
 
@@ -258,8 +283,26 @@ try:
 except Exception as e:
     print(f"❌ Erreur lors du chargement des données taxi: {e}")
     # Création d'un DataFrame vide pour éviter les erreurs
-    df = pd.DataFrame(columns=["pickup_datetime", "dropoff_datetime", "trip_distance", "hour", "weekday", "date"])
+    df = pd.DataFrame(columns=[
+        "pickup_datetime",
+        "dropoff_datetime",
+        "trip_distance",
+        "passenger_count",
+        "payment_type",
+        "total_amount",
+        "PULocationID",
+        "DOLocationID",
+        "tip_amount",
+        "hour",
+        "weekday",
+        "date",
+        "duration",
+        "payment_method"
+    ])
+
     print("⚠️ Aucune donnée taxi disponible, rapport limité")
+
+
 ```
 
 ```{python}
@@ -270,7 +313,7 @@ print()
 print(f"- 📅 Période d'analyse : **{month_name}**")
 print(f"- 🗓️ Code période : **{month_code}**")
 print(f"- 📊 Fichier de données : **data/{month_code}-taxi.csv**")
-print(f"- 🔢 Nombre d'enregistrements : **{len(df_taxi):,}**")
+print(f"- 🔢 Nombre d'enregistrements : **{len(df):,}**")
 # 📈 Indicateurs Clés de Performance (KPIs)
 ```
 
@@ -806,6 +849,289 @@ if 'observation_msg' in globals():
     print('</div>')
 ```
 
+# 💰 Chiffre d'Affaires et Revenus
+
+```{python}
+#| fig-cap: " "
+
+# Série temporelle journalière
+df['date'] = pd.to_datetime(df['pickup_datetime']).dt.date
+daily_rev = df.groupby('date')['total_amount'].sum().reset_index(name='daily_revenue')
+avg_rev = df['total_amount'].mean()
+
+import plotly.express as px
+fig = px.line(daily_rev, x='date', y='daily_revenue',
+              labels={'date':'Date','daily_revenue':'Revenu total ($)'},
+              title=f"Revenu total journalier et revenu moyen par course")
+fig.update_layout(width=1200, height=600, plot_bgcolor='white')
+fig.show()
+```
+```{python}
+#| output: asis
+max_rev = daily_rev['daily_revenue'].max()
+min_rev = daily_rev['daily_revenue'].min()
+
+observation_msg = f"Le revenu journalier maximal a atteint **${max_rev:,.0f}** et le minimum **${min_rev:,.0f}**. "
+observation_msg += "Le revenu moyen par course s’établit à "
+observation_msg += f"**${avg_rev:.2f}**, avec des variations marquées selon les jours."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+```
+
+# 🏷️ Répartition par Mode de Paiement
+
+```{python}
+#| fig-cap: " "
+payment_counts = df['payment_method'].value_counts(normalize=False).reset_index()
+payment_counts.columns = ['mode','count']
+payment_counts['pct'] = payment_counts['count'] / payment_counts['count'].sum() * 100
+
+fig = px.bar(payment_counts, y='mode', x='count', orientation='h',
+             text=payment_counts['pct'].map('{:.1f}%'.format),
+             title="Nombre de courses par mode de paiement")
+
+fig.update_layout(
+    width=1200,
+    height=600,
+    plot_bgcolor='white',
+    yaxis={'categoryorder':'total ascending'},
+    xaxis_title="",     # ← pas de titre axe X
+    yaxis_title=""      # ← pas de titre axe Y
+)
+fig.show()
+```
+
+```{python}
+#| output: asis
+top_mode = payment_counts.loc[payment_counts['count'].idxmax()]
+
+observation_msg = f"Le mode de paiement le plus utilisé est **{top_mode['mode']}** "
+observation_msg += f"avec **{top_mode['pct']:.1f}%** des courses."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+
+```
+
+# 🗺️ Carte des Prises en Charge par Zone
+
+```{python}
+
+# Charge le GeoJSON sous forme de GeoDataFrame
+zones = gpd.read_file('data/taxi_zones.json')[['LocationID','zone','geometry']]
+
+# Jointure avec les trajets
+merged = zones.merge(
+    df.groupby('PULocationID').size().reset_index(name='trips'),
+    left_on='LocationID',
+    right_on='PULocationID',
+    how='left'
+).fillna(0)
+
+# Création de la carte choroplèthe sur fond blanc
+fig = px.choropleth(
+    merged,
+    geojson=merged.geometry.__geo_interface__,  # passage du GeoDataFrame en GeoJSON inline
+    locations=merged.index,
+    color='trips',
+    color_continuous_scale="Blues",
+    range_color=(0, merged['trips'].max()),
+    title="Nombre de trajets par zone de prise en charge"
+)
+
+fig.update_geos(
+    fitbounds="locations",
+    visible=False
+)
+
+fig.update_layout(
+    width=1000,
+    height=800,
+    paper_bgcolor="white",
+    plot_bgcolor="white",
+    coloraxis_colorbar=dict(
+        title="Trajets",
+        tickformat=".0f"
+    )
+)
+
+fig.show()
+```
+```{python}
+#| output: asis
+top_zone = merged.loc[merged['trips'].idxmax()]
+
+observation_msg = f"La zone ayant enregistré le plus de prises en charge est **{top_zone['zone']}** "
+observation_msg += f"avec **{int(top_zone['trips']):,}** trajets."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+```
+
+# 🔄 Flux de Trajets entre Zones
+
+```{python}
+import plotly.graph_objects as go
+
+# Top 10 des paires PU → DO
+pairs = df.groupby(['PULocationID', 'DOLocationID']).size().reset_index(name='count')
+top_pairs = pairs.nlargest(10, 'count')
+
+# Labels : récupérer toutes les zones concernées
+unique_locations = pd.unique(top_pairs[['PULocationID', 'DOLocationID']].values.ravel())
+
+# Construire les labels et leur mapping d'index pour Sankey
+zones_map = dict(zip(zones['LocationID'], zones['zone']))
+labels = [zones_map.get(loc, f"ID {loc}") for loc in unique_locations]
+label_idx = {loc: i for i, loc in enumerate(unique_locations)}
+
+# Source, Target, Value
+source = top_pairs['PULocationID'].map(label_idx)
+target = top_pairs['DOLocationID'].map(label_idx)
+value  = top_pairs['count']
+
+# Création du Sankey
+fig = go.Figure(go.Sankey(
+    node=dict(
+        label=labels,
+        pad=15,
+        thickness=20,
+        line=dict(color="black", width=0.5)
+    ),
+    link=dict(
+        source=source,
+        target=target,
+        value=value
+    )
+))
+
+fig.update_layout(
+    title="Top 10 flux PU → DO",
+    font_size=12,
+    width=1200,
+    height=600,
+    paper_bgcolor="white",
+    plot_bgcolor="white"
+)
+
+fig.show()
+```
+```{python}
+#| output: asis
+top_pair = top_pairs.loc[top_pairs['count'].idxmax()]
+
+observation_msg = f"La paire la plus fréquente de zones est "
+observation_msg += f"**{zones_map.get(top_pair['PULocationID'], 'Inconnu')} → {zones_map.get(top_pair['DOLocationID'], 'Inconnu')}** "
+observation_msg += f"avec **{int(top_pair['count']):,}** trajets."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+```
+
+# 📏 Tarif Moyen par Mile
+```{python}
+df['fare_per_mile'] = df['total_amount'] / df['trip_distance']
+# Box‑plot par tranche horaire
+df['hour'] = pd.to_datetime(df['pickup_datetime']).dt.hour
+
+fig = px.box(df, x='hour', y='fare_per_mile',
+             labels={'hour':'Heure','fare_per_mile':'$ / mile'},
+             title="Distribution du tarif ($) par mile selon l’heure")
+fig.update_layout(width=1200, height=600, plot_bgcolor='white')
+fig.show()
+```
+
+```{python}
+#| output: asis
+max_fpm = df['fare_per_mile'].max()
+mean_fpm = df['fare_per_mile'].mean()
+observation_msg = f"Le tarif moyen par mile est de **${mean_fpm:.2f}**, avec un maximum observé à **${max_fpm:.2f}**."
+observation_msg += " Les valeurs extrêmes peuvent être dues à des trajets très courts avec minimum de prise en charge élevé."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+
+```
+# 👥 Nombre de Passagers et Indicateurs
+
+```{python}
+# Répartition passager_count
+pc = df['passenger_count'].value_counts().reset_index()
+pc.columns = ['passengers','count']
+
+fig = px.bar(pc, x='passengers', y='count',
+             labels={'passengers':' ','count':' '},
+             title="Distribution du nombre de passagers par course")
+fig.update_layout(width=1200, height=600, plot_bgcolor='white')
+fig.show()
+```
+
+```{python}
+# KPI par nombre de passagers
+group = df.groupby('passenger_count').agg({
+    'total_amount':'mean',
+    'tip_amount':'mean'
+}).reset_index().round(2)
+
+# Création du graphique
+fig = go.Figure()
+
+# Barre revenu moyen
+fig.add_trace(go.Bar(
+    y=group['passenger_count'],
+    x=group['total_amount'],
+    name='Revenu moyen ($)',
+    orientation='h',
+    marker_color='royalblue'
+))
+
+# Barre pourboire moyen
+fig.add_trace(go.Bar(
+    y=group['passenger_count'],
+    x=group['tip_amount'],
+    name='Pourboire moyen ($)',
+    orientation='h',
+    marker_color='orange'
+))
+
+# Mise en forme du graphique
+fig.update_layout(
+    barmode='group',
+    title="Revenu et pourboire moyen par nombre de passagers",
+    xaxis_title="Montant moyen ($)",
+    yaxis_title="Nombre de passagers",
+    height=600,
+    width=1000,
+    paper_bgcolor="white",
+    plot_bgcolor="white"
+)
+
+fig.show()
+```
+```{python}
+#| output: asis
+top_group = group.loc[group['total_amount'].idxmax()]
+
+observation_msg = f"Les trajets avec **{int(top_group['passenger_count'])} passager(s)** rapportent en moyenne le revenu le plus élevé à **${top_group['total_amount']:.2f}**."
+observation_msg += f" Le pourboire moyen dans cette catégorie est de **${top_group['tip_amount']:.2f}**."
+
+print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
+print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
+print(f'  <p>{observation_msg}</p>')
+print('</div>')
+```
+
 # 📌 Synthèse du Mois
 
 ```{python}
@@ -825,15 +1151,25 @@ else:
 
 ```{python}
 #| output: asis
-# Synthèse "à la volée" en Markdown
-print(f"- 📈 L'activité maximale se concentre généralement entre **{peak_hours_range}** selon les données disponibles.")
-print(f"- 🛣️ Distance moyenne des trajets : **{avg_distance_rounded:.2f} Miles**")
-print(f"- 📆 Une analyse plus détaillée de la répartition journalière est disponible dans les graphiques ci-dessus.")
+print(f"- 📈 L’activité maximale se concentre généralement entre **{peak_hours_range}** selon les données disponibles.")
+print(f"- 🛣️ Distance moyenne des trajets : **{avg_distance_rounded:.2f} miles**")
+print(f"- 💵 Revenu moyen par course : **${avg_rev:.2f}**")
+print(f"- 📊 Zone la plus fréquentée : **{top_zone['zone']}** avec **{int(top_zone['trips']):,}** prises en charge.")
+print(f"- 🏷️ Mode de paiement le plus utilisé : **{top_mode['mode']}** ({top_mode['pct']:.1f}%)")
+print(f"- 📌 Tarif moyen par mile : **${mean_fpm:.2f}**")
 ```
 
 # 🚀 Recommandations pour les Prochains Mois
 
-* Intégrer le montant des courses et des pourboires pour enrichir les analyses économiques.
-* Identifier les zones géographiques les plus actives via des cartes interactives.
-* Étudier plus en détail l'impact des facteurs externes comme les événements ou la saisonnalité sur le nombre de courses.
-* Croiser les données avec des événements locaux (concerts, matchs, conventions) pour expliquer certains pics.
+* Pousser l’analyse du chiffre d’affaires journalier et des variations hebdomadaires.
+
+* Suivre l’évolution des modes de paiement (essor ou déclin de certaines pratiques).
+
+* Localiser les zones les plus actives pour adapter les ressources taxi et campagnes marketing.
+
+* Suivre les flux inter-zones principaux pour planifier la logistique et anticiper les congestions.
+
+* Intégrer des analyses de tarifs par mile et durées pour détecter les anomalies tarifaires.
+
+* Étendre le rapport aux indicateurs de pourboire et passagers pour affiner les segments de clientèle.
+
