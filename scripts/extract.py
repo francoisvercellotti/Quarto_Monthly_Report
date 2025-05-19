@@ -20,7 +20,6 @@ COLUMN_MAP = {
     "PULocationID":       "PULocationID",
     "DOLocationID":       "DOLocationID",
     "tip_amount":        "tip_amount",
-    "payment_method":       "payment_method"
 }
 
 # Mapping payment_type → libellé

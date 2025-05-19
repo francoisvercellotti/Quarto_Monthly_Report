@@ -882,9 +882,7 @@ print('</div>')
 ```
 
 # 🏷️ Répartition par Mode de Paiement
-
 ```{python}
-#| fig-cap: " "
 payment_counts = df['payment_method'].value_counts(normalize=False).reset_index()
 payment_counts.columns = ['mode','count']
 payment_counts['pct'] = payment_counts['count'] / payment_counts['count'].sum() * 100
@@ -892,30 +890,19 @@ payment_counts['pct'] = payment_counts['count'] / payment_counts['count'].sum() 
 fig = px.bar(payment_counts, y='mode', x='count', orientation='h',
              text=payment_counts['pct'].map('{:.1f}%'.format),
              title="Nombre de courses par mode de paiement")
-
 fig.update_layout(
     width=1200,
     height=600,
     plot_bgcolor='white',
-    yaxis={'categoryorder':'total ascending'},
-    xaxis_title="",     # ← pas de titre axe X
-    yaxis_title=""      # ← pas de titre axe Y
+    yaxis={'categoryorder':'total ascending'}
 )
 fig.show()
 ```
 
 ```{python}
 #| output: asis
-top_mode = payment_counts.loc[payment_counts['count'].idxmax()]
-
-observation_msg = f"Le mode de paiement le plus utilisé est **{top_mode['mode']}** "
-observation_msg += f"avec **{top_mode['pct']:.1f}%** des courses."
-
-print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
-print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
-print(f'  <p>{observation_msg}</p>')
-print('</div>')
-
+for _, row in payment_counts.iterrows():
+    print(f"- {row['mode']}: {int(row['count']):,} courses ({row['pct']:.1f}%)")
 ```
 
 # 🗺️ Carte des Prises en Charge par Zone
@@ -975,67 +962,7 @@ print(f'  <p>{observation_msg}</p>')
 print('</div>')
 ```
 
-# 🔄 Flux de Trajets entre Zones
 
-```{python}
-import plotly.graph_objects as go
-
-# Top 10 des paires PU → DO
-pairs = df.groupby(['PULocationID', 'DOLocationID']).size().reset_index(name='count')
-top_pairs = pairs.nlargest(10, 'count')
-
-# Labels : récupérer toutes les zones concernées
-unique_locations = pd.unique(top_pairs[['PULocationID', 'DOLocationID']].values.ravel())
-
-# Construire les labels et leur mapping d'index pour Sankey
-zones_map = dict(zip(zones['LocationID'], zones['zone']))
-labels = [zones_map.get(loc, f"ID {loc}") for loc in unique_locations]
-label_idx = {loc: i for i, loc in enumerate(unique_locations)}
-
-# Source, Target, Value
-source = top_pairs['PULocationID'].map(label_idx)
-target = top_pairs['DOLocationID'].map(label_idx)
-value  = top_pairs['count']
-
-# Création du Sankey
-fig = go.Figure(go.Sankey(
-    node=dict(
-        label=labels,
-        pad=15,
-        thickness=20,
-        line=dict(color="black", width=0.5)
-    ),
-    link=dict(
-        source=source,
-        target=target,
-        value=value
-    )
-))
-
-fig.update_layout(
-    title="Top 10 flux PU → DO",
-    font_size=12,
-    width=1200,
-    height=600,
-    paper_bgcolor="white",
-    plot_bgcolor="white"
-)
-
-fig.show()
-```
-```{python}
-#| output: asis
-top_pair = top_pairs.loc[top_pairs['count'].idxmax()]
-
-observation_msg = f"La paire la plus fréquente de zones est "
-observation_msg += f"**{zones_map.get(top_pair['PULocationID'], 'Inconnu')} → {zones_map.get(top_pair['DOLocationID'], 'Inconnu')}** "
-observation_msg += f"avec **{int(top_pair['count']):,}** trajets."
-
-print('<div style="background-color: #f0f7fb; border-left: 5px solid #3498db; padding: 15px; margin: 15px 0; border-radius: 3px;">')
-print('  <h4 style="margin-top: 0; color: #3498db;">Observation</h4>')
-print(f'  <p>{observation_msg}</p>')
-print('</div>')
-```
 
 # 📏 Tarif Moyen par Mile
 ```{python}
